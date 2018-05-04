@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "XMLParser": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\tclasenlocal\\Downloads\\Auftrag-01_20180419-145701-093.xml"
+    }
+  }
+}
