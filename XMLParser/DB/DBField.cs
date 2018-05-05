@@ -24,7 +24,7 @@ namespace XMLParser.DB
     {
         public string Name { get; }
         public DBFieldType DBFieldType { get; }
-        public DBFieldKeyType DBFieldKeyType { get; }
+        public DBFieldKeyType DBFieldKeyType { get; private set; }
         public List<(DBTable Table, DBField Field)> ForeignKeyReferences { get; private set; }
 
         public DBField(string name, DBFieldType dBFieldType, DBFieldKeyType dBFieldKeyType)
@@ -34,9 +34,19 @@ namespace XMLParser.DB
             DBFieldType = dBFieldType;
         }
 
+        public void MakePrimaryKey() => DBFieldKeyType = DBFieldKeyType.PrimaryKey;
+
         public bool AddReference(DBTable table, DBField field)
         {
-            if (DBFieldKeyType.PrimaryKey == DBFieldKeyType && field.DBFieldKeyType == DBFieldKeyType.ForeignKey)
+            if (field.DBFieldKeyType == DBFieldKeyType.PrimaryKey)
+            {
+                DBFieldKeyType = DBFieldKeyType.ForeignKey;
+                if (ForeignKeyReferences != null)
+                    throw new Exception("We have references alread!?");
+                ForeignKeyReferences = new List<(DBTable Table, DBField Field)>() { (table, field) };
+                return true;
+            }
+            else if (DBFieldKeyType.PrimaryKey == DBFieldKeyType && field.DBFieldKeyType == DBFieldKeyType.ForeignKey)
             {
                 if (ForeignKeyReferences == null)
                 {
@@ -91,7 +101,7 @@ namespace XMLParser.DB
 
         public override int GetHashCode()
         {
-            return Name.GetHashCode() ^ DBFieldKeyType.GetHashCode() ^ DBFieldType.GetHashCode(); 
+            return Name.GetHashCode() ^ DBFieldKeyType.GetHashCode() ^ DBFieldType.GetHashCode();
         }
     }
 }
