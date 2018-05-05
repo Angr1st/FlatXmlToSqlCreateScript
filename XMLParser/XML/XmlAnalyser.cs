@@ -43,7 +43,32 @@ namespace XMLParser.XML
             }
             var orderedNodes = nodeNames.OrderBy(x => x.Name);
             var distinctNodes = orderedNodes.Distinct();
+            distinctNodes = EstablishForeignKeyRelations(distinctNodes);
             return distinctNodes;
+        }
+
+        private IEnumerable<DBTable> EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
+        {
+            var listTable = tables.ToList();
+            var toupleList = listTable.Select(x => (x.DBFields.First(), x)).ToList();
+
+            List<((DBField primaryKey, DBTable sourceTable), DBTable foreignTable, DBField foreignKey)> returnList = new List<((DBField primaryKey, DBTable sourceTable), DBTable foreignTable, DBField foreignKey)>();
+            foreach (var primaryFieldWithSourceTable in toupleList)
+            {
+                foreach (var table in listTable)
+                {
+                    foreach (var field in table.DBFields)
+                    {
+                        if (primaryFieldWithSourceTable.Item1.Name == field.Name && primaryFieldWithSourceTable.x.Name != table.Name)
+                        {
+                            returnList.Add((primaryFieldWithSourceTable, table, field));
+                        }
+                    }
+                }
+            }
+
+            var secondList = toupleList.SelectMany(x => listTable.SelectMany(y => y.DBFields.Where(z => z.Name == x.Item1.Name && x.x.Name != y.Name).Select(z => (x, y, z)))).ToList();
+            return tables;
         }
 
         private static XmlDocument LoadXML(string fileName)
