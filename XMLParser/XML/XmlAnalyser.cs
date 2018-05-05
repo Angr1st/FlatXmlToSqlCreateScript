@@ -60,14 +60,14 @@ namespace XMLParser.XML
             }
         }
 
-        private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.Name + "\n -" + String.Join("\n -", x.DBFields)).ToArray();
+        private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
 
         private List<DBField> GetNodeNames(XmlNodeList nodeList)
         {
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
-                returnList.Add(new DBField(item.Name, AnalyseValue(item.Value), DBFieldKeyType.Value));
+                returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
             }
             return returnList;
         }
