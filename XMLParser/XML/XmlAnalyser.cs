@@ -81,18 +81,18 @@ namespace XMLParser.XML
         {
             if (value.Length < 25 && value.Contains("."))
             {
-                var doubleResult = TryParse(value, DBFieldType.@double);
-                return doubleResult.parseSuccess ? doubleResult.parsedType : DBFieldType.varchar;
+                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.@double);
+                return parseSuccess ? parsedType : DBFieldType.varchar;
             }
             else if (value.Length < 25)
             {
-                var integerResult = TryParse(value, DBFieldType.integer);
-                return integerResult.parseSuccess ? integerResult.parsedType : DBFieldType.varchar;
+                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.integer);
+                return parseSuccess ? parsedType : DBFieldType.varchar;
             }
             else if (value.Length == 25)
             {
-                var dateResult = TryParse(value, DBFieldType.dateTime);
-                return dateResult.parseSuccess ? dateResult.parsedType : DBFieldType.varchar;
+                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.dateTime);
+                return parseSuccess ? parsedType : DBFieldType.varchar;
             }
             else
             {
