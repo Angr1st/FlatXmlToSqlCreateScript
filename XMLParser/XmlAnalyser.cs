@@ -23,7 +23,22 @@ namespace XMLParser
             var nodeNames = new List<(string, List<string>)>();
             foreach (XmlNode item in elements)
             {
-                nodeNames.Add((item.Name, GetNodeNames(item.ChildNodes)));
+                var existingNodes = nodeNames.Where(x => x.Item1 == item.Name);
+                if (existingNodes.Count() != 0)
+                {
+                    //There is only ever one node with the same name already in the List
+                    var existingNode = existingNodes.First();
+                    var subNodeNameList = existingNode.Item2;
+                    subNodeNameList.AddRange(GetNodeNames(item.ChildNodes));
+                    subNodeNameList = subNodeNameList.Distinct().ToList();
+                    (string name, List<string> subNodeNames) newEntry = ( existingNode.Item1, subNodeNameList);
+                    nodeNames.Remove(existingNode);
+                    nodeNames.Add(newEntry);
+                }
+                else
+                {
+                    nodeNames.Add((item.Name, GetNodeNames(item.ChildNodes)));
+                }
             }
             var orderedNodes = nodeNames.OrderBy(x => x.Item1);
             var distinctNodes = orderedNodes.Distinct(new TupleComparer());
@@ -70,7 +85,7 @@ namespace XMLParser
         {
             var xOrdered = x.OrderBy(z => z);
             var yOrdered = y.OrderBy(z => z);
-            return xOrdered.Zip(yOrdered, (t, r) => t == r ).Aggregate((w,e) => w&&e);
+            return xOrdered.Zip(yOrdered, (t, r) => t == r).Aggregate((w, e) => w && e);
         }
 
         public int GetHashCode((string, List<string>) obj)
