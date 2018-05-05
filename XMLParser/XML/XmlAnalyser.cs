@@ -140,25 +140,5 @@ namespace XMLParser.XML
         }
 
     }
-
-    public class TupleComparer : IEqualityComparer<(string, List<string>)>
-    {
-        public bool Equals((string, List<string>) x, (string, List<string>) y)
-        {
-            return x.Item1 == y.Item1 && x.Item2.Count == y.Item2.Count && CompareListByItems(x.Item2, y.Item2);
-        }
-
-        private bool CompareListByItems(List<string> x, List<string> y)
-        {
-            var xOrdered = x.OrderBy(z => z);
-            var yOrdered = y.OrderBy(z => z);
-            return xOrdered.Zip(yOrdered, (t, r) => t == r).Aggregate((w, e) => w && e);
-        }
-
-        public int GetHashCode((string, List<string>) obj)
-        {
-            return obj.Item1.GetHashCode();
-        }
-    }
 }
 
