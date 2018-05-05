@@ -67,7 +67,12 @@ namespace XMLParser.XML
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
-                returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
+                var defaultKeyType = DBFieldKeyType.Value;
+                if (returnList.Count == 0)
+                {
+                    defaultKeyType = DBFieldKeyType.PrimaryKey;
+                }
+                returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), defaultKeyType));
             }
             return returnList;
         }
