@@ -17,7 +17,7 @@ namespace XMLParser.DB
 
         public override string ToString()
         {
-            return $"Create table {Name} ({String.Join(",", DBFields)}, Primary key({DBFields.First().Name})";
+            return $"Create table {Name} ({String.Join(",", DBFields)}, Primary key({DBFields.First().Name}))";
         }
     }
 }
