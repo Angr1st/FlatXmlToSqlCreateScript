@@ -5,7 +5,7 @@ using System.Xml;
 using System.Linq;
 using System.IO;
 
-namespace XMLParser
+namespace XMLParser.XML
 {
     class XmlAnalyser
     {
