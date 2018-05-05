@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Linq;
 using System.IO;
+using XMLParser.DB;
 
 namespace XMLParser.XML
 {
@@ -13,35 +14,35 @@ namespace XMLParser.XML
         {
             XmlDocument xmlDocument = LoadXML(args[0]);
 
-            IEnumerable<(string, List<string>)> distinctNodes = ExtractUniqueNodeNames(xmlDocument);
+            IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument);
             File.WriteAllLines(".\\test.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
         }
 
-        private IEnumerable<(string, List<string>)> ExtractUniqueNodeNames(XmlDocument xmlDocument)
+        private IEnumerable<DBTable> ExtractUniqueNodeNames(XmlDocument xmlDocument)
         {
             var elements = xmlDocument.LastChild.ChildNodes;
-            var nodeNames = new List<(string, List<string>)>();
+            var nodeNames = new List<DBTable>();
             foreach (XmlNode item in elements)
             {
-                var existingNodes = nodeNames.Where(x => x.Item1 == item.Name);
+                var existingNodes = nodeNames.Where(x => x.Name == item.Name);
                 if (existingNodes.Count() != 0)
                 {
                     //There is only ever one node with the same name already in the List
                     var existingNode = existingNodes.First();
-                    var subNodeNameList = existingNode.Item2;
+                    var subNodeNameList = existingNode.DBFields;
                     subNodeNameList.AddRange(GetNodeNames(item.ChildNodes));
                     subNodeNameList = subNodeNameList.Distinct().ToList();
-                    (string name, List<string> subNodeNames) newEntry = ( existingNode.Item1, subNodeNameList);
+                    DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
                     nodeNames.Remove(existingNode);
                     nodeNames.Add(newEntry);
                 }
                 else
                 {
-                    nodeNames.Add((item.Name, GetNodeNames(item.ChildNodes)));
+                    nodeNames.Add(new DBTable(item.Name, GetNodeNames(item.ChildNodes)));
                 }
             }
-            var orderedNodes = nodeNames.OrderBy(x => x.Item1);
-            var distinctNodes = orderedNodes.Distinct(new TupleComparer());
+            var orderedNodes = nodeNames.OrderBy(x => x.Name);
+            var distinctNodes = orderedNodes.Distinct();
             return distinctNodes;
         }
 
@@ -59,18 +60,79 @@ namespace XMLParser.XML
             }
         }
 
-        private string[] ConvertToStringArray(IEnumerable<(string, List<string>)> ps) => ps.Select(x => x.Item1 + "\n -" + String.Join("\n -", x.Item2.ToArray())).ToArray();
+        private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.Name + "\n -" + String.Join("\n -", x.DBFields)).ToArray();
 
-        private List<string> GetNodeNames(XmlNodeList nodeList)
+        private List<DBField> GetNodeNames(XmlNodeList nodeList)
         {
-            var returnList = new List<string>();
+            var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
-                returnList.Add(item.Name);
+                returnList.Add(new DBField(item.Name, AnalyseValue(item.Value), DBFieldKeyType.Value));
             }
             return returnList;
         }
 
+        private DBFieldType AnalyseValue(string value)
+        {
+            if (value.Length < 25 && value.Contains("."))
+            {
+                var doubleResult = TryParse(value, DBFieldType.@double);
+                return doubleResult.parseSuccess ? doubleResult.parsedType : DBFieldType.varchar;
+            }
+            else if (value.Length < 25)
+            {
+                var integerResult = TryParse(value, DBFieldType.integer);
+                return integerResult.parseSuccess ? integerResult.parsedType : DBFieldType.varchar;
+            }
+            else if (value.Length == 25)
+            {
+                var dateResult = TryParse(value, DBFieldType.dateTime);
+                return dateResult.parseSuccess ? dateResult.parsedType : DBFieldType.varchar;
+            }
+            else
+            {
+                return DBFieldType.varchar;
+            }
+        }
+
+        private (bool parseSuccess, DBFieldType parsedType) TryParse(string value, DBFieldType dBFieldType)
+        {
+            switch (dBFieldType)
+            {
+                case DBFieldType.varchar:
+                    return (true, DBFieldType.varchar);
+
+                case DBFieldType.integer:
+                    return TryParseInteger();
+
+                case DBFieldType.@double:
+                    return TryParseDouble();
+
+                case DBFieldType.dateTime:
+                    return TryParseDateTimeOffset();
+
+                default:
+                    return (false, DBFieldType.unkown);
+            }
+
+            (bool, DBFieldType) TryParseInteger()
+            {
+                var isInteger = int.TryParse(value, out int intValue);
+                return isInteger ? (isInteger, DBFieldType.integer) : (isInteger, DBFieldType.unkown);
+            }
+
+            (bool, DBFieldType) TryParseDateTimeOffset()
+            {
+                var isDate = DateTimeOffset.TryParse(value, out DateTimeOffset dateTimeOffset);
+                return isDate ? (isDate, DBFieldType.dateTime) : (isDate, DBFieldType.unkown);
+            }
+
+            (bool, DBFieldType) TryParseDouble()
+            {
+                var isDouble = Double.TryParse(value, out Double doubleValue);
+                return isDouble ? (isDouble, DBFieldType.@double) : (isDouble, DBFieldType.unkown);
+            }
+        }
 
     }
 

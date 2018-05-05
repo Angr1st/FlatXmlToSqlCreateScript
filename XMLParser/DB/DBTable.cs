@@ -14,5 +14,10 @@ namespace XMLParser.DB
             Name = name;
             DBFields = fields;
         }
+
+        public override string ToString()
+        {
+            return $"Create table {Name} ({String.Join(",", DBFields)})";
+        }
     }
 }
