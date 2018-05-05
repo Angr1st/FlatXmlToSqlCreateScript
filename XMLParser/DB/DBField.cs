@@ -61,7 +61,7 @@ namespace XMLParser.DB
                     dataType = "varchar(200)";
                     break;
                 case DBFieldType.integer:
-                    dataType = "integer";
+                    dataType = "int";
                     break;
                 case DBFieldType.@double:
                     dataType = "double";

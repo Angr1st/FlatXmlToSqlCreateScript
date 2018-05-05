@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 
 namespace XMLParser.DB
 {
@@ -17,7 +17,7 @@ namespace XMLParser.DB
 
         public override string ToString()
         {
-            return $"Create table {Name} ({String.Join(",", DBFields)})";
+            return $"Create table {Name} ({String.Join(",", DBFields)}, Primary key({DBFields.First().Name})";
         }
     }
 }
