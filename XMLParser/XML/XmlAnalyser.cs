@@ -30,7 +30,7 @@ namespace XMLParser.XML
                     //There is only ever one node with the same name already in the List
                     var existingNode = existingNodes.First();
                     var subNodeNameList = existingNode.DBFields;
-                    subNodeNameList.AddRange(GetNodeNames(item.ChildNodes));
+                    subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name));
                     subNodeNameList = subNodeNameList.Distinct().ToList();
                     DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
                     nodeNames.Remove(existingNode);
@@ -38,37 +38,26 @@ namespace XMLParser.XML
                 }
                 else
                 {
-                    nodeNames.Add(new DBTable(item.Name, GetNodeNames(item.ChildNodes)));
+                    nodeNames.Add(new DBTable(item.Name, GetNodeNames(item.ChildNodes, item.Name)));
                 }
             }
             var orderedNodes = nodeNames.OrderBy(x => x.Name);
             var distinctNodes = orderedNodes.Distinct();
-            distinctNodes = EstablishForeignKeyRelations(distinctNodes);
+            EstablishForeignKeyRelations(distinctNodes);
             return distinctNodes;
         }
 
-        private IEnumerable<DBTable> EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
+        private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
         {
-            var listTable = tables.ToList();
-            var toupleList = listTable.Select(x => (x.DBFields.First(), x)).ToList();
-
-            List<((DBField primaryKey, DBTable sourceTable), DBTable foreignTable, DBField foreignKey)> returnList = new List<((DBField primaryKey, DBTable sourceTable), DBTable foreignTable, DBField foreignKey)>();
-            foreach (var primaryFieldWithSourceTable in toupleList)
-            {
-                foreach (var table in listTable)
+            return tables.Select(x => (x.DBFields.First(), x))
+                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => z.Name == x.Item1.Name && x.x.Name != y.Name).Select(z => (x, y, z))))
+                .Select(x => 
                 {
-                    foreach (var field in table.DBFields)
-                    {
-                        if (primaryFieldWithSourceTable.Item1.Name == field.Name && primaryFieldWithSourceTable.x.Name != table.Name)
-                        {
-                            returnList.Add((primaryFieldWithSourceTable, table, field));
-                        }
-                    }
-                }
-            }
-
-            var secondList = toupleList.SelectMany(x => listTable.SelectMany(y => y.DBFields.Where(z => z.Name == x.Item1.Name && x.x.Name != y.Name).Select(z => (x, y, z)))).ToList();
-            return tables;
+                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.Item1);
+                    var resultPrimaryKey = x.x.Item1.AddReference(x.y, x.z);
+                    return resultForeignKey && resultPrimaryKey;
+                })
+                .Aggregate((x,y) => x && y);
         }
 
         private static XmlDocument LoadXML(string fileName)
@@ -87,18 +76,27 @@ namespace XMLParser.XML
 
         private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
 
-        private List<DBField> GetNodeNames(XmlNodeList nodeList)
+        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName)
         {
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
-                var defaultKeyType = DBFieldKeyType.Value;
-                if (returnList.Count == 0)
-                {
-                    defaultKeyType = DBFieldKeyType.PrimaryKey;
-                }
-                returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), defaultKeyType));
+                returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
             }
+            var pkCandidates = returnList.Where(x => x.Name.EndsWith("ID"));
+            var numberOfPKCandidates = pkCandidates.Count();
+            var pkCandidatesWithoutID = pkCandidates.Select(x => x.Name.TrimEnd('D', 'I'));
+            var resultList = pkCandidatesWithoutID.Where(x => x == nodeName);
+            var newNumberOfPKCandidates = resultList.Count();
+
+            if (newNumberOfPKCandidates == 1)
+            {
+                returnList.Where(x => x.Name == resultList.First() + "ID").First().MakePrimaryKey();
+            } else
+            {
+
+            }
+
             return returnList;
         }
 
