@@ -75,5 +75,23 @@ namespace XMLParser.DB
 
             return $"{Name} {dataType}";
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is DBField)
+            {
+                var dbField = obj as DBField;
+                if (dbField.Name == Name && dbField.DBFieldType == DBFieldType)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Name.GetHashCode() ^ DBFieldKeyType.GetHashCode() ^ DBFieldType.GetHashCode(); 
+        }
     }
 }
