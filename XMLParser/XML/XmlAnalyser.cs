@@ -120,6 +120,10 @@ namespace XMLParser.XML
                 {
                     pkCandidates.First().MakePrimaryKey();
                 }
+                else if(pkCandidates.Count(x=> x.Name == $"{nodeName}ID") ==1)
+                {
+                    pkCandidates.First(x => x.Name == $"{nodeName}ID").MakePrimaryKey();
+                }
             }
             return returnList;
         }
