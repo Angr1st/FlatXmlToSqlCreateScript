@@ -67,12 +67,12 @@ namespace XMLParser.XML
 
         private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
         {
-            return tables.Select(x => (x.DBFields.First(), x))
-                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => z.Name == x.Item1.Name && x.x.Name != y.Name).Select(z => (x, y, z))))
+            return tables.Select(x => (x.PrimaryKey, x)).Where(x => x.PrimaryKey != null)
+                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => z.Name == x.PrimaryKey.Name && x.x.Name != y.Name).Select(z => (x, y, z))))
                 .Select(x =>
                 {
-                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.Item1);
-                    var resultPrimaryKey = x.x.Item1.AddReference(x.y, x.z);
+                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.PrimaryKey);
+                    var resultPrimaryKey = x.x.PrimaryKey.AddReference(x.y, x.z);
                     return resultForeignKey && resultPrimaryKey;
                 })
                 .Aggregate((x, y) => x && y);
