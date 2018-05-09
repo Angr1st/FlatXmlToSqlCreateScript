@@ -13,24 +13,42 @@ namespace XMLParser.XML
         public void Execute(string[] args)
         {
             XmlDocument xmlDocument = LoadXML(args[0]);
-
-            IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument);
+            var manualyIdentifiedPrimaryKeys = LoadPrimaryKeyFile(args[1]);
+            IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument, manualyIdentifiedPrimaryKeys);
             File.WriteAllLines(".\\test.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
         }
 
-        private IEnumerable<DBTable> ExtractUniqueNodeNames(XmlDocument xmlDocument)
+        private Dictionary<string, string> LoadPrimaryKeyFile(string fileName)
+        {
+            Dictionary<string, string> returnDict = new Dictionary<string, string>();
+           var lines = File.ReadAllLines(fileName);
+            foreach (var line in lines)
+            {
+                var splittedLine = line.Split(';');
+                returnDict.Add(splittedLine[0], splittedLine[1]);
+            }
+            return returnDict;
+        }
+
+        private IEnumerable<DBTable> ExtractUniqueNodeNames(XmlDocument xmlDocument, Dictionary<string, string> primaryKeys)
         {
             var elements = xmlDocument.LastChild.ChildNodes;
             var nodeNames = new List<DBTable>();
             foreach (XmlNode item in elements)
             {
+                string primaryKeyName = string.Empty;
+                if (primaryKeys.Keys.Contains(item.Name))
+                {
+                    primaryKeyName = primaryKeys[item.Name];
+                }
+
                 var existingNodes = nodeNames.Where(x => x.Name == item.Name);
                 if (existingNodes.Count() != 0)
                 {
                     //There is only ever one node with the same name already in the List
                     var existingNode = existingNodes.First();
                     var subNodeNameList = existingNode.DBFields;
-                    subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name));
+                    subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name, primaryKeyName));
                     subNodeNameList = subNodeNameList.Distinct().ToList();
                     DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
                     nodeNames.Remove(existingNode);
@@ -38,7 +56,7 @@ namespace XMLParser.XML
                 }
                 else
                 {
-                    nodeNames.Add(new DBTable(item.Name, GetNodeNames(item.ChildNodes, item.Name)));
+                    nodeNames.Add(new DBTable(item.Name, GetNodeNames(item.ChildNodes, item.Name, primaryKeyName)));
                 }
             }
             var orderedNodes = nodeNames.OrderBy(x => x.Name);
@@ -51,13 +69,13 @@ namespace XMLParser.XML
         {
             return tables.Select(x => (x.DBFields.First(), x))
                 .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => z.Name == x.Item1.Name && x.x.Name != y.Name).Select(z => (x, y, z))))
-                .Select(x => 
+                .Select(x =>
                 {
                     var resultForeignKey = x.z.AddReference(x.x.x, x.x.Item1);
                     var resultPrimaryKey = x.x.Item1.AddReference(x.y, x.z);
                     return resultForeignKey && resultPrimaryKey;
                 })
-                .Aggregate((x,y) => x && y);
+                .Aggregate((x, y) => x && y);
         }
 
         private static XmlDocument LoadXML(string fileName)
@@ -76,27 +94,33 @@ namespace XMLParser.XML
 
         private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
 
-        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName)
+        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, string primaryKeyName)
         {
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
                 returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
             }
-            var pkCandidates = returnList.Where(x => x.Name.EndsWith("ID"));
-            var numberOfPKCandidates = pkCandidates.Count();
-            var pkCandidatesWithoutID = pkCandidates.Select(x => x.Name.TrimEnd('D', 'I'));
-            var resultList = pkCandidatesWithoutID.Where(x => x == nodeName);
-            var newNumberOfPKCandidates = resultList.Count();
-
-            if (newNumberOfPKCandidates == 1)
+            if (primaryKeyName != string.Empty)
             {
-                returnList.Where(x => x.Name == resultList.First() + "ID").First().MakePrimaryKey();
-            } else
-            {
-
+                var primaryKeyCandidateList = returnList.Where(x => x.Name == primaryKeyName);
+                if (primaryKeyCandidateList.Count() == 1)
+                {
+                    var primaryKeyCandidate = primaryKeyCandidateList.First();
+                    if (primaryKeyCandidate.DBFieldKeyType != DBFieldKeyType.PrimaryKey)
+                    {
+                        primaryKeyCandidate.MakePrimaryKey();
+                    }
+                }
             }
-
+            else
+            {
+                var pkCandidates = returnList.Where(pkCandidate => pkCandidate.Name.StartsWith(nodeName) && pkCandidate.Name.EndsWith("ID"));
+                if (pkCandidates.Count() == 1)
+                {
+                    pkCandidates.First().MakePrimaryKey();
+                }
+            }
             return returnList;
         }
 
