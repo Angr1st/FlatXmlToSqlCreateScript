@@ -29,7 +29,7 @@ namespace XMLParser.DB
 
         private string ForeignKeyStatement()
         {
-            var foreignKeyDefinitions = DBFields.Where(x => x.DBFieldKeyType == DBFieldKeyType.ForeignKey).Select(x => $"FOREIGN KEY({x.Name}) REFERENCES {x.ForeignKeyReferences[0].Table.Name}({x.ForeignKeyReferences[0].Field.Name})");
+            var foreignKeyDefinitions = DBFields.Where(x => x.DBFieldKeyType == DBFieldKeyType.ForeignKey).Select(x => $"FOREIGN KEY ({x.Name}) REFERENCES {x.ForeignKeyReferences[0].Table.Name}({x.ForeignKeyReferences[0].Field.Name})");
             return String.Join(",", foreignKeyDefinitions);
         }
 
