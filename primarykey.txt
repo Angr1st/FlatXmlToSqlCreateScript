@@ -1,0 +1,13 @@
+ApplForm;ApplFID;
+ApplGeraet;ApplGID;
+ApplWeg;ApplWID;
+ArtAufbTyp;AufbTypID;
+ArtLager;ArtLagID;
+Kostenstellen;KostID;
+LagerBed;LagBedID;
+Lagerort;LagOrtID;
+LightProtDfn;LightProtID;
+Stationen;StatID;
+Units;UnitID;
+ZubDetImpRel;RelID;
+ZubStatus;ZubStatID;
