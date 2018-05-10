@@ -18,7 +18,7 @@ namespace XMLParser.XML
             }
             if (args.Length > 2)
             {
-                throw new ArgumentException("You passed in to many arguments. Only two arguments are allowed. The first one to specify the location of the xml and the second optional argument for the manualy specified primary keys.")
+                throw new ArgumentException("You passed in to many arguments. Only two arguments are allowed. The first one to specify the location of the xml and the second optional argument for the manualy specified primary keys.");
             }
 
             XmlDocument xmlDocument = LoadXML(args[0]);
