@@ -12,20 +12,44 @@ namespace XMLParser.XML
     {
         public void Execute(string[] args)
         {
+            if (args.Length == 0 )
+            {
+                throw new ArgumentException("You need to pass in the path to the xml file that should be analysed.");
+            }
+            if (args.Length > 2)
+            {
+                throw new ArgumentException("You passed in to many arguments. Only two arguments are allowed. The first one to specify the location of the xml and the second optional argument for the manualy specified primary keys.")
+            }
+
             XmlDocument xmlDocument = LoadXML(args[0]);
-            var manualyIdentifiedPrimaryKeys = LoadPrimaryKeyFile(args[1]);
+            Dictionary<string, string> manualyIdentifiedPrimaryKeys = new Dictionary<string, string>();
+            if (args.Length == 2)
+            {
+                manualyIdentifiedPrimaryKeys = LoadPrimaryKeyFile(args[1]);
+            }
+
             IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument, manualyIdentifiedPrimaryKeys);
-            File.WriteAllLines(".\\test.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
+            File.WriteAllLines(".\\createTables.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
         }
 
         private Dictionary<string, string> LoadPrimaryKeyFile(string fileName)
         {
             Dictionary<string, string> returnDict = new Dictionary<string, string>();
-            var lines = File.ReadAllLines(fileName);
-            foreach (var line in lines)
+            try
             {
-                var splittedLine = line.Split(';');
-                returnDict.Add(splittedLine[0], splittedLine[1]);
+                var lines = File.ReadAllLines(fileName);
+                foreach (var line in lines)
+                {
+                    if (line.Length != 0)
+                    {
+                        var splittedLine = line.Split(';');
+                        returnDict.Add(splittedLine[0], splittedLine[1]);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Error when loading the primary key file!", e);
             }
             return returnDict;
         }
@@ -110,9 +134,9 @@ namespace XMLParser.XML
                 xmlDoc.Load(fileName);
                 return xmlDoc;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                throw new Exception("Error while loading the XML.", e);
             }
         }
 
