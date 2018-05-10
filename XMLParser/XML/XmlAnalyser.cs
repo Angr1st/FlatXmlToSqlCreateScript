@@ -21,7 +21,7 @@ namespace XMLParser.XML
         private Dictionary<string, string> LoadPrimaryKeyFile(string fileName)
         {
             Dictionary<string, string> returnDict = new Dictionary<string, string>();
-           var lines = File.ReadAllLines(fileName);
+            var lines = File.ReadAllLines(fileName);
             foreach (var line in lines)
             {
                 var splittedLine = line.Split(';');
@@ -49,7 +49,9 @@ namespace XMLParser.XML
                     var existingNode = existingNodes.First();
                     var subNodeNameList = existingNode.DBFields;
                     subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name, primaryKeyName));
-                    subNodeNameList = subNodeNameList.Distinct().ToList();
+                    var distinctWithoutUnkowns = subNodeNameList.Distinct().Where(x => x.DBFieldType != DBFieldType.unkown);
+                    var allDoubleDifferentTyp = distinctWithoutUnkowns.SelectMany(x => distinctWithoutUnkowns.Where(y => x.Name == y.Name && x.DBFieldType != y.DBFieldType)).Where(x => x.DBFieldType != DBFieldType.@double).Distinct();
+                    subNodeNameList = distinctWithoutUnkowns.Except(allDoubleDifferentTyp).ToList();
                     DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
                     nodeNames.Remove(existingNode);
                     nodeNames.Add(newEntry);
@@ -62,7 +64,29 @@ namespace XMLParser.XML
             var orderedNodes = nodeNames.OrderBy(x => x.Name);
             var distinctNodes = orderedNodes.Distinct();
             EstablishForeignKeyRelations(distinctNodes);
-            return distinctNodes;
+
+            return distinctNodes.OrderBy(x => GetNumberForOrdering(x.PrimaryKey, x.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)));
+        }
+
+        private int GetNumberForOrdering(DBField primaryKey, IEnumerable<DBField> foreignKeys)
+        {
+            int orderNumber = 1;
+            if (primaryKey == null)
+            {
+                orderNumber += 999;
+            }
+            var numberOfForeignKeys = foreignKeys.Count();
+            orderNumber += numberOfForeignKeys;
+
+            int highestDependingOrderingNumber = 0;
+            if (numberOfForeignKeys != 0)
+            {
+                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field) = x.ForeignKeyReferences.First(); return GetNumberForOrdering(Table.PrimaryKey, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
+            }
+            //Check if all the tables this table depends on have a lower orderNumber
+
+
+            return highestDependingOrderingNumber >= orderNumber ? highestDependingOrderingNumber + 1 : orderNumber;
         }
 
         private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
@@ -120,7 +144,7 @@ namespace XMLParser.XML
                 {
                     pkCandidates.First().MakePrimaryKey();
                 }
-                else if(pkCandidates.Count(x=> x.Name == $"{nodeName}ID") ==1)
+                else if (pkCandidates.Count(x => x.Name == $"{nodeName}ID") == 1)
                 {
                     pkCandidates.First(x => x.Name == $"{nodeName}ID").MakePrimaryKey();
                 }
@@ -130,7 +154,11 @@ namespace XMLParser.XML
 
         private DBFieldType AnalyseValue(string value)
         {
-            if (value.Length < 25 && value.Contains("."))
+            if (value.Length == 0)
+            {
+                return DBFieldType.unkown;
+            }
+            else if (value.Length < 25 && value.Contains("."))
             {
                 var (parseSuccess, parsedType) = TryParse(value, DBFieldType.@double);
                 return parseSuccess ? parsedType : DBFieldType.varchar;
