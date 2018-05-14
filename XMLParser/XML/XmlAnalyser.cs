@@ -22,7 +22,7 @@ namespace XMLParser.XML
             }
 
             XmlDocument xmlDocument = LoadXML(args[0]);
-            Dictionary<string, string> manualyIdentifiedPrimaryKeys = new Dictionary<string, string>();
+            Dictionary<string, List<string>> manualyIdentifiedPrimaryKeys = new Dictionary<string, List<string>>();
             if (args.Length == 2)
             {
                 manualyIdentifiedPrimaryKeys = LoadPrimaryKeyFile(args[1]);
@@ -32,9 +32,9 @@ namespace XMLParser.XML
             File.WriteAllLines(".\\createTables.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
         }
 
-        private Dictionary<string, string> LoadPrimaryKeyFile(string fileName)
+        private Dictionary<string,List<string>> LoadPrimaryKeyFile(string fileName)
         {
-            Dictionary<string, string> returnDict = new Dictionary<string, string>();
+            Dictionary<string, List<string>> returnDict = new Dictionary<string, List<string>>();
             try
             {
                 var lines = File.ReadAllLines(fileName);
@@ -43,7 +43,9 @@ namespace XMLParser.XML
                     if (line.Length != 0)
                     {
                         var splittedLine = line.Split(';');
-                        returnDict.Add(splittedLine[0], splittedLine[1]);
+                        var stringList = new List<string>();
+                        stringList.AddRange(splittedLine.Skip(1).TakeWhile(x => !string.IsNullOrEmpty(x)));
+                        returnDict.Add(splittedLine[0],stringList);
                     }
                 }
             }
@@ -54,13 +56,13 @@ namespace XMLParser.XML
             return returnDict;
         }
 
-        private IEnumerable<DBTable> ExtractUniqueNodeNames(XmlDocument xmlDocument, Dictionary<string, string> primaryKeys)
+        private IEnumerable<DBTable> ExtractUniqueNodeNames(XmlDocument xmlDocument, Dictionary<string, List<string>> primaryKeys)
         {
             var elements = xmlDocument.LastChild.ChildNodes;
             var nodeNames = new List<DBTable>();
             foreach (XmlNode item in elements)
             {
-                string primaryKeyName = string.Empty;
+                List<string> primaryKeyName = new List<string>();
                 if (primaryKeys.Keys.Contains(item.Name))
                 {
                     primaryKeyName = primaryKeys[item.Name];
@@ -92,7 +94,7 @@ namespace XMLParser.XML
             return distinctNodes.OrderBy(x => GetNumberForOrdering(x.PrimaryKey, x.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)));
         }
 
-        private int GetNumberForOrdering(DBField primaryKey, IEnumerable<DBField> foreignKeys)
+        private int GetNumberForOrdering(List<DBField> primaryKey, IEnumerable<DBField> foreignKeys)
         {
             int orderNumber = 1;
             if (primaryKey == null)
@@ -105,7 +107,7 @@ namespace XMLParser.XML
             int highestDependingOrderingNumber = 0;
             if (numberOfForeignKeys != 0)
             {
-                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field) = x.ForeignKeyReferences.First(); return GetNumberForOrdering(Table.PrimaryKey, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
+                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field, ReferenceDirection) = x.ForeignKeyReferences.Where(z => z.ReferenceDirection == DBFieldKeyType.ForeignKey).First(); return GetNumberForOrdering(Table.PrimaryKey, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
             }
             //Check if all the tables this table depends on have a lower orderNumber
 
@@ -116,7 +118,7 @@ namespace XMLParser.XML
         private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
         {
             return tables.Select(x => (x.PrimaryKey, x)).Where(x => x.PrimaryKey != null)
-                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => z.Name == x.PrimaryKey.Name && x.x.Name != y.Name).Select(z => (x, y, z))))
+                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => x.PrimaryKey.Contains(z) && x.x.Name != y.Name).Select(z => (x, y, z))))
                 .Select(x =>
                 {
                     var resultForeignKey = x.z.AddReference(x.x.x, x.x.PrimaryKey);
@@ -142,16 +144,16 @@ namespace XMLParser.XML
 
         private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
 
-        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, string primaryKeyName)
+        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, List<string> primaryKeyName)
         {
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
                 returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
             }
-            if (primaryKeyName != string.Empty)
+            if (primaryKeyName.Count != 0)
             {
-                var primaryKeyCandidateList = returnList.Where(x => x.Name == primaryKeyName);
+                var primaryKeyCandidateList = returnList.Where(x => primaryKeyName.Contains(x.Name));
                 if (primaryKeyCandidateList.Count() == 1)
                 {
                     var primaryKeyCandidate = primaryKeyCandidateList.First();

@@ -8,7 +8,7 @@ namespace XMLParser.DB
     {
         public string Name { get; }
         public List<DBField> DBFields { get; }
-        public DBField PrimaryKey { get { return DBFields.Find(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey); } }
+        public List<DBField> PrimaryKey { get { return DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey); } }
 
         public DBTable(string name, List<DBField> fields)
         {
@@ -25,7 +25,7 @@ namespace XMLParser.DB
             return foreignKey.Length != 0 ? $"{primaryKey} ,{foreignKey}" : primaryKey ;
         }
 
-        private string PrimaryKeyStatement() => PrimaryKey != null ? $", Primary key({PrimaryKey.Name})" : string.Empty;
+        private string PrimaryKeyStatement() => PrimaryKey != null ? $", Primary key({String.Join(",", PrimaryKey.Select(x=>x.Name))})" : string.Empty;
 
         private string ForeignKeyStatement()
         {
