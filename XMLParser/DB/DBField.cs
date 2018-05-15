@@ -35,30 +35,41 @@ namespace XMLParser.DB
             DBFieldType = dBFieldType;
         }
 
-        public void MakePrimaryKey() => DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.PrimaryKey;
-
-        public bool AddReference(DBTable table, List<DBField> field)
+        public void MakePrimaryKey()
         {
-            return field.Select(x => AddReferenceInternal(table, x)).Aggregate( (x,y) => x & y);
+            if (DBFieldKeyType.HasFlag(DBFieldKeyType.Value))
+            {
+                DBFieldKeyType = DBFieldKeyType.PrimaryKey;
+            }
+            else
+            {
+                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.PrimaryKey;
+            }
         }
 
-        private bool AddReferenceInternal(DBTable table, DBField field)
+        public bool AddReference(DBTable table, List<DBField> field, DBFieldKeyType direction)
         {
-            if (field.DBFieldKeyType == DBFieldKeyType.PrimaryKey)
+            return field.Select(x => AddReferenceInternal(table, x, direction)).Aggregate((x, y) => x & y);
+        }
+
+        private bool AddReferenceInternal(DBTable table, DBField field, DBFieldKeyType direction)
+        {
+            if (direction == DBFieldKeyType.ForeignKey)
             {
-                if (ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.ForeignKey))
+                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
+                if (ForeignKeyReferences != null && ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.ForeignKey))
                     throw new Exception("We have references alread!?");
-                ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>() { (table, field, DBFieldKeyType.ForeignKey) };
+                ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>() { (table, field, direction) };
                 return true;
             }
-            else if (DBFieldKeyType.PrimaryKey == DBFieldKeyType && field.DBFieldKeyType == DBFieldKeyType.ForeignKey)
+            else if (direction == DBFieldKeyType.PrimaryKey)
             {
                 if (ForeignKeyReferences == null)
                 {
                     ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>();
                 }
 
-                ForeignKeyReferences.Add((table, field, DBFieldKeyType.PrimaryKey));
+                ForeignKeyReferences.Add((table, field, direction));
                 return true;
             }
             else

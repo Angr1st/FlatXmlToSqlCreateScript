@@ -121,8 +121,16 @@ namespace XMLParser.XML
                 .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => x.PrimaryKey.Contains(z) && x.x.Name != y.Name).Select(z => (x, y, z))))
                 .Select(x =>
                 {
-                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.PrimaryKey);
-                    var resultPrimaryKey = x.x.PrimaryKey.AddReference(x.y, x.z);
+                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.PrimaryKey, DBFieldKeyType.ForeignKey);
+                    if (!resultForeignKey)
+                    {
+                        throw new Exception("Something went wrong with the foreignkey thing!");
+                    }
+                    var resultPrimaryKey = x.x.PrimaryKey.AddReference(x.y, x.z, DBFieldKeyType.PrimaryKey);
+                    if (!resultPrimaryKey)
+                    {
+                        throw new Exception("Something went wrong with the primary key!");
+                    }
                     return resultForeignKey && resultPrimaryKey;
                 })
                 .Aggregate((x, y) => x && y);
@@ -144,17 +152,24 @@ namespace XMLParser.XML
 
         private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
 
-        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, List<string> primaryKeyName)
+        private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, List<string> primaryKeyNameList)
         {
             var returnList = new List<DBField>();
             foreach (XmlNode item in nodeList)
             {
                 returnList.Add(new DBField(item.Name, AnalyseValue(item.InnerText), DBFieldKeyType.Value));
             }
-            if (primaryKeyName.Count != 0)
+            if (primaryKeyNameList.Count != 0)
             {
-                var primaryKeyCandidateList = returnList.Where(x => primaryKeyName.Contains(x.Name));
-                if (primaryKeyCandidateList.Count() == 1)
+                var primaryKeyCandidateList = returnList.Where(x => primaryKeyNameList.Contains(x.Name));
+                if ( primaryKeyCandidateList.Count() == primaryKeyNameList.Count)
+                {
+                    foreach (var item in primaryKeyCandidateList)
+                    {
+                        item.MakePrimaryKey();
+                    }
+                }
+                else if (primaryKeyCandidateList.Count() == 1 )
                 {
                     var primaryKeyCandidate = primaryKeyCandidateList.First();
                     if (primaryKeyCandidate.DBFieldKeyType != DBFieldKeyType.PrimaryKey)
