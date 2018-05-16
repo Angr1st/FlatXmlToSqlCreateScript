@@ -117,23 +117,25 @@ namespace XMLParser.XML
 
         private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
         {
-            return tables.Select(x => (x.PrimaryKey, x)).Where(x => x.PrimaryKey != null)
-                .SelectMany(x => tables.SelectMany(y => y.DBFields.Where(z => x.PrimaryKey.Contains(z) && x.x.Name != y.Name).Select(z => (x, y, z))))
-                .Select(x =>
+            return tables.Select(table => (table.PrimaryKey, table))
+                .SelectMany( primaryKeyAndTable => tables
+                .SelectMany(otherTable => otherTable.DBFields
+                .Where(otherTableFields => primaryKeyAndTable.PrimaryKey.Contains(otherTableFields) && primaryKeyAndTable.table.Name != otherTable.Name)
+                .Select(foreignField => (primaryKeyAndTable, otherTable, foreignField))))
+                .Select(pktbfk => 
                 {
-                    var resultForeignKey = x.z.AddReference(x.x.x, x.x.PrimaryKey, DBFieldKeyType.ForeignKey);
+                    var resultForeignKey = pktbfk.foreignField.AddReference(pktbfk.primaryKeyAndTable.table, pktbfk.primaryKeyAndTable.PrimaryKey, DBFieldKeyType.PrimaryKey);
                     if (!resultForeignKey)
                     {
                         throw new Exception("Something went wrong with the foreignkey thing!");
                     }
-                    var resultPrimaryKey = x.x.PrimaryKey.AddReference(x.y, x.z, DBFieldKeyType.PrimaryKey);
+                    var resultPrimaryKey = pktbfk.primaryKeyAndTable.PrimaryKey.AddReference(pktbfk.otherTable, pktbfk.foreignField, DBFieldKeyType.ForeignKey);
                     if (!resultPrimaryKey)
                     {
                         throw new Exception("Something went wrong with the primary key!");
                     }
                     return resultForeignKey && resultPrimaryKey;
-                })
-                .Aggregate((x, y) => x && y);
+                }).Aggregate((x, y) => x && y);
         }
 
         private static XmlDocument LoadXML(string fileName)
@@ -162,11 +164,11 @@ namespace XMLParser.XML
             if (primaryKeyNameList.Count != 0)
             {
                 var primaryKeyCandidateList = returnList.Where(x => primaryKeyNameList.Contains(x.Name));
-                if ( primaryKeyCandidateList.Count() == primaryKeyNameList.Count)
+                if ( primaryKeyCandidateList.Count() == primaryKeyNameList.Count && primaryKeyNameList.Count != 1)
                 {
                     foreach (var item in primaryKeyCandidateList)
                     {
-                        item.MakePrimaryKey();
+                        item.MakeClusteredPrimaryKey();
                     }
                 }
                 else if (primaryKeyCandidateList.Count() == 1 )

@@ -9,7 +9,8 @@ namespace XMLParser.DB
     {
         PrimaryKey = 1,
         ForeignKey = 2,
-        Value = 4
+        Value = 4,
+        ClusteredPrimaryKey = 8
     }
 
     public enum DBFieldType
@@ -47,6 +48,8 @@ namespace XMLParser.DB
             }
         }
 
+        public void MakeClusteredPrimaryKey() => DBFieldKeyType = DBFieldKeyType.ClusteredPrimaryKey;
+
         public bool AddReference(DBTable table, List<DBField> field, DBFieldKeyType direction)
         {
             return field.Select(x => AddReferenceInternal(table, x, direction)).Aggregate((x, y) => x & y);
@@ -54,15 +57,15 @@ namespace XMLParser.DB
 
         private bool AddReferenceInternal(DBTable table, DBField field, DBFieldKeyType direction)
         {
-            if (direction == DBFieldKeyType.ForeignKey)
+            if (direction == DBFieldKeyType.PrimaryKey)//This means this field references a primary key and is a foreign key itself(there can only be one of these)
             {
                 DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
-                if (ForeignKeyReferences != null && ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.ForeignKey))
+                if (ForeignKeyReferences != null && ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.PrimaryKey))
                     throw new Exception("We have references alread!?");
                 ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>() { (table, field, direction) };
                 return true;
             }
-            else if (direction == DBFieldKeyType.PrimaryKey)
+            else if (direction == DBFieldKeyType.ForeignKey)
             {
                 if (ForeignKeyReferences == null)
                 {
