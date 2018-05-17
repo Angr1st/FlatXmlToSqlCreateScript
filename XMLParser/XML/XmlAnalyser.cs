@@ -172,7 +172,7 @@ namespace XMLParser.XML
                 if ( primaryKeyCandidateList.Count() == primaryKeyNameList.Count && primaryKeyNameList.Count != 1)
                 {
                     foreach (var item in primaryKeyCandidateList)
-                    {
+                    {//Check if it is here where GPGPGr is not set properly; If this works look at where the fk is set.
                         item.MakeClusteredPrimaryKey();
                     }
                 }
