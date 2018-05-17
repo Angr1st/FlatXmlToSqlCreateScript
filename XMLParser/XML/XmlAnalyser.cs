@@ -91,7 +91,7 @@ namespace XMLParser.XML
             var distinctNodes = orderedNodes.Distinct();
             EstablishForeignKeyRelations(distinctNodes);
 
-            return distinctNodes.OrderBy(x => GetNumberForOrdering(x.PrimaryKey, x.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)));
+            return distinctNodes.OrderBy(table => GetNumberForOrdering(table.PrimaryKey.primaryKeyFields, table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)));
         }
 
         private int GetNumberForOrdering(List<DBField> primaryKey, IEnumerable<DBField> foreignKeys)
@@ -107,7 +107,7 @@ namespace XMLParser.XML
             int highestDependingOrderingNumber = 0;
             if (numberOfForeignKeys != 0)
             {
-                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field, ReferenceDirection) = x.ForeignKeyReferences.Where(z => z.ReferenceDirection == DBFieldKeyType.ForeignKey).First(); return GetNumberForOrdering(Table.PrimaryKey, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
+                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field, ReferenceDirection) = x.ForeignKeyReferences.Where(z => z.ReferenceDirection == DBFieldKeyType.ForeignKey).First(); return GetNumberForOrdering(Table.PrimaryKey.primaryKeyFields, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
             }
             //Check if all the tables this table depends on have a lower orderNumber
 
@@ -117,25 +117,30 @@ namespace XMLParser.XML
 
         private bool EstablishForeignKeyRelations(IEnumerable<DBTable> tables)
         {
-            return tables.Select(table => (table.PrimaryKey, table))
+            var primaryKeys = tables.Select(table => (table.PrimaryKey, table))
+                .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.PrimaryKey)
                 .SelectMany( primaryKeyAndTable => tables
                 .SelectMany(otherTable => otherTable.DBFields
-                .Where(otherTableFields => primaryKeyAndTable.PrimaryKey.Contains(otherTableFields) && primaryKeyAndTable.table.Name != otherTable.Name)
+                .Where(otherTableFields => primaryKeyAndTable.PrimaryKey.primaryKeyFields.Contains(otherTableFields) && primaryKeyAndTable.table.Name != otherTable.Name)
                 .Select(foreignField => (primaryKeyAndTable, otherTable, foreignField))))
                 .Select(pktbfk => 
                 {
-                    var resultForeignKey = pktbfk.foreignField.AddReference(pktbfk.primaryKeyAndTable.table, pktbfk.primaryKeyAndTable.PrimaryKey, DBFieldKeyType.PrimaryKey);
+                    var resultForeignKey = pktbfk.foreignField.AddReference(pktbfk.primaryKeyAndTable.table, pktbfk.primaryKeyAndTable.PrimaryKey.primaryKeyFields, DBFieldKeyType.PrimaryKey);
                     if (!resultForeignKey)
                     {
                         throw new Exception("Something went wrong with the foreignkey thing!");
                     }
-                    var resultPrimaryKey = pktbfk.primaryKeyAndTable.PrimaryKey.AddReference(pktbfk.otherTable, pktbfk.foreignField, DBFieldKeyType.ForeignKey);
+                    var resultPrimaryKey = pktbfk.primaryKeyAndTable.PrimaryKey.primaryKeyFields.AddReference(pktbfk.otherTable, pktbfk.foreignField, DBFieldKeyType.ForeignKey);
                     if (!resultPrimaryKey)
                     {
                         throw new Exception("Something went wrong with the primary key!");
                     }
                     return resultForeignKey && resultPrimaryKey;
                 }).Aggregate((x, y) => x && y);
+            //var clusteredPrimaryKeys = tables.Select(table => (table.PrimaryKey, table))
+            //    .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.ClusteredPrimaryKey)
+            //    .
+            return primaryKeys;
         }
 
         private static XmlDocument LoadXML(string fileName)

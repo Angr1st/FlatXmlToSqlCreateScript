@@ -8,7 +8,7 @@ namespace XMLParser.DB
     {
         public string Name { get; }
         public List<DBField> DBFields { get; }
-        public List<DBField> PrimaryKey { get { return DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey); } }
+        public (List<DBField> primaryKeyFields, DBFieldKeyType pkType) PrimaryKey { get { return DBFields.Count(fields => fields.DBFieldKeyType == DBFieldKeyType.PrimaryKey) == 1 ? (DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey), DBFieldKeyType.PrimaryKey) : DBFields.Count(fields => fields.DBFieldKeyType == DBFieldKeyType.ClusteredPrimaryKey) > 1 ? (DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.ClusteredPrimaryKey), DBFieldKeyType.ClusteredPrimaryKey) : default; } }
 
         public DBTable(string name, List<DBField> fields)
         {
@@ -25,11 +25,13 @@ namespace XMLParser.DB
             return foreignKey.Length != 0 ? $"{primaryKey} ,{foreignKey}" : primaryKey ;
         }
 
-        private string PrimaryKeyStatement() => PrimaryKey != null ? $", Primary key({String.Join(",", PrimaryKey.Select(x=>x.Name))})" : string.Empty;
-
+        private string PrimaryKeyStatement()
+        {
+            return PrimaryKey != default(ValueTuple<List<DBField>,DBFieldKeyType>) ? $", Primary key({String.Join(",", PrimaryKey.primaryKeyFields.Select(fields => fields.Name))})" : string.Empty;
+        }
         private string ForeignKeyStatement()
         {
-            var foreignKeyDefinitions = DBFields.Where(x => x.DBFieldKeyType == DBFieldKeyType.ForeignKey).Select(x => $"FOREIGN KEY ({x.Name}) REFERENCES {x.ForeignKeyReferences[0].Table.Name}({x.ForeignKeyReferences[0].Field.Name})");
+            var foreignKeyDefinitions = DBFields.Where(field => field.DBFieldKeyType.HasFlag(DBFieldKeyType.ForeignKey) && field.ReferencesPrimaryKey).Select(field => $"FOREIGN KEY ({field.Name}) REFERENCES {field.ReferencedPrimaryKey.Table.Name}({field.ReferencedPrimaryKey.Field.Name})");
             return String.Join(",", foreignKeyDefinitions);
         }
 

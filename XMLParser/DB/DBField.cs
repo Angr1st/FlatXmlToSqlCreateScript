@@ -7,6 +7,7 @@ namespace XMLParser.DB
     [Flags]
     public enum DBFieldKeyType
     {
+        Unkown = 0,
         PrimaryKey = 1,
         ForeignKey = 2,
         Value = 4,
@@ -28,6 +29,17 @@ namespace XMLParser.DB
         public DBFieldType DBFieldType { get; }
         public DBFieldKeyType DBFieldKeyType { get; private set; }
         public List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)> ForeignKeyReferences { get; private set; }
+
+        public bool ReferencesPrimaryKey { get { return ReferencedPrimaryKey != default; } }
+
+        public (DBTable Table, DBField Field) ReferencedPrimaryKey
+        {
+            get
+            {
+                var (Table, Field, ReferenceDirection) = ForeignKeyReferences.Where(entry =>  entry.ReferenceDirection.HasFlag(DBFieldKeyType.PrimaryKey)).FirstOrDefault();
+                return (Table, Field);
+            }
+        }
 
         public DBField(string name, DBFieldType dBFieldType, DBFieldKeyType dBFieldKeyType)
         {
