@@ -91,7 +91,7 @@ namespace XMLParser.XML
             var distinctNodes = orderedNodes.Distinct();
             EstablishForeignKeyRelations(distinctNodes);
 
-            return distinctNodes.OrderBy(table => GetNumberForOrdering(table.PrimaryKey.primaryKeyFields, table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)));
+            return distinctNodes.OrderBy(table => GetNumberForOrdering(table.PrimaryKey.primaryKeyFields, table.DBFields.Where(y => y.DBFieldKeyType.HasFlag(DBFieldKeyType.ForeignKey))));
         }
 
         private int GetNumberForOrdering(List<DBField> primaryKey, IEnumerable<DBField> foreignKeys)
@@ -107,7 +107,7 @@ namespace XMLParser.XML
             int highestDependingOrderingNumber = 0;
             if (numberOfForeignKeys != 0)
             {
-                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field, ReferenceDirection) = x.ForeignKeyReferences.Where(z => z.ReferenceDirection == DBFieldKeyType.ForeignKey).First(); return GetNumberForOrdering(Table.PrimaryKey.primaryKeyFields, Table.DBFields.Where(y => y.DBFieldKeyType == DBFieldKeyType.ForeignKey)); }).Aggregate((x, y) => x >= y ? x : y);
+                highestDependingOrderingNumber = foreignKeys.Select(x => { var (Table, Field, ReferenceDirection) = x.ForeignKeyReferences.Where(z => z.ReferenceDirection == DBFieldKeyType.PrimaryKey).First(); return GetNumberForOrdering(Table.PrimaryKey.primaryKeyFields, Table.DBFields.Where(y => y.DBFieldKeyType.HasFlag( DBFieldKeyType.ForeignKey))); }).Aggregate((x, y) => x >= y ? x : y);
             }
             //Check if all the tables this table depends on have a lower orderNumber
 
