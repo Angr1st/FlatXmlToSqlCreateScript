@@ -137,9 +137,9 @@ namespace XMLParser.XML
                     }
                     return resultForeignKey && resultPrimaryKey;
                 }).Aggregate((x, y) => x && y);
-            //var clusteredPrimaryKeys = tables.Select(table => (table.PrimaryKey, table))
-            //    .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.ClusteredPrimaryKey)
-            //    .
+            var clusteredPrimaryKeys = tables.Select(table => (table.PrimaryKey, table))
+                .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.ClusteredPrimaryKey)
+                .ToList();
             return primaryKeys;
         }
 

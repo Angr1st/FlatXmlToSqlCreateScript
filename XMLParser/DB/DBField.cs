@@ -62,6 +62,18 @@ namespace XMLParser.DB
 
         public void MakeClusteredPrimaryKey() => DBFieldKeyType = DBFieldKeyType.ClusteredPrimaryKey;
 
+        private void MakeForeignKey()
+        {
+            if (DBFieldKeyType.HasFlag(DBFieldKeyType.Value))
+            {
+                DBFieldKeyType = DBFieldKeyType.ForeignKey;
+            }
+            else
+            {
+                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
+            }
+        }
+
         public bool AddReference(DBTable table, List<DBField> field, DBFieldKeyType direction)
         {
             return field.Select(x => AddReferenceInternal(table, x, direction)).Aggregate((x, y) => x & y);
@@ -71,7 +83,7 @@ namespace XMLParser.DB
         {
             if (direction == DBFieldKeyType.PrimaryKey)//This means this field references a primary key and is a foreign key itself(there can only be one of these)
             {
-                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
+                MakeForeignKey();
                 if (ForeignKeyReferences != null && ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.PrimaryKey))
                     throw new Exception("We have references alread!?");
                 ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>() { (table, field, direction) };
