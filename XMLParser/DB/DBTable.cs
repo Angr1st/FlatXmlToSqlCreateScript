@@ -8,7 +8,7 @@ namespace XMLParser.DB
     {
         public string Name { get; }
         public List<DBField> DBFields { get; }
-        public (List<DBField> primaryKeyFields, DBFieldKeyType pkType) PrimaryKey { get { return DBFields.Count(fields => fields.DBFieldKeyType == DBFieldKeyType.PrimaryKey) == 1 ? (DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey), DBFieldKeyType.PrimaryKey) : DBFields.Count(fields => fields.DBFieldKeyType == DBFieldKeyType.ClusteredPrimaryKey) > 1 ? (DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.ClusteredPrimaryKey), DBFieldKeyType.ClusteredPrimaryKey) : default; } }
+        public (List<DBField> primaryKeyFields, DBFieldKeyType pkType) PrimaryKey { get { return DBFields.Count(fields => fields.DBFieldKeyType == DBFieldKeyType.PrimaryKey) == 1 ? (DBFields.FindAll(x => x.DBFieldKeyType == DBFieldKeyType.PrimaryKey), DBFieldKeyType.PrimaryKey) : DBFields.Count(fields => fields.DBFieldKeyType.HasFlag( DBFieldKeyType.ClusteredPrimaryKey)) > 1 ? (DBFields.FindAll(x => x.DBFieldKeyType.HasFlag(DBFieldKeyType.ClusteredPrimaryKey)), DBFieldKeyType.ClusteredPrimaryKey) : default; } }
 
         public DBTable(string name, List<DBField> fields)
         {

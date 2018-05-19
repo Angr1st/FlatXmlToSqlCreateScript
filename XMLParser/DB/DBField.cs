@@ -28,6 +28,7 @@ namespace XMLParser.DB
         public string Name { get; }
         public DBFieldType DBFieldType { get; }
         public DBFieldKeyType DBFieldKeyType { get; private set; }
+        public int Length { get; }
         public List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)> ForeignKeyReferences { get; private set; }
 
         public bool ReferencesPrimaryKey { get { return ReferencedPrimaryKey != default; } }
@@ -41,11 +42,12 @@ namespace XMLParser.DB
             }
         }
 
-        public DBField(string name, DBFieldType dBFieldType, DBFieldKeyType dBFieldKeyType)
+        public DBField(string name, (DBFieldType dBFieldType, int length) fieldType ,DBFieldKeyType dBFieldKeyType)
         {
             Name = name;
             DBFieldKeyType = dBFieldKeyType;
-            DBFieldType = dBFieldType;
+            DBFieldType = fieldType.dBFieldType;
+            Length = fieldType.length;
         }
 
         public void MakePrimaryKey()
@@ -62,6 +64,18 @@ namespace XMLParser.DB
 
         public void MakeClusteredPrimaryKey() => DBFieldKeyType = DBFieldKeyType.ClusteredPrimaryKey;
 
+        private void MakeForeignKey()
+        {
+            if (DBFieldKeyType.HasFlag(DBFieldKeyType.Value))
+            {
+                DBFieldKeyType = DBFieldKeyType.ForeignKey;
+            }
+            else
+            {
+                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
+            }
+        }
+
         public bool AddReference(DBTable table, List<DBField> field, DBFieldKeyType direction)
         {
             return field.Select(x => AddReferenceInternal(table, x, direction)).Aggregate((x, y) => x & y);
@@ -71,7 +85,7 @@ namespace XMLParser.DB
         {
             if (direction == DBFieldKeyType.PrimaryKey)//This means this field references a primary key and is a foreign key itself(there can only be one of these)
             {
-                DBFieldKeyType = DBFieldKeyType | DBFieldKeyType.ForeignKey;
+                MakeForeignKey();
                 if (ForeignKeyReferences != null && ForeignKeyReferences.Exists(x => x.ReferenceDirection == DBFieldKeyType.PrimaryKey))
                     throw new Exception("We have references alread!?");
                 ForeignKeyReferences = new List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)>() { (table, field, direction) };
@@ -99,7 +113,7 @@ namespace XMLParser.DB
             switch (DBFieldType)
             {
                 case DBFieldType.varchar:
-                    dataType = "varchar(200)";
+                    dataType = $"varchar({(Length<10 ? Length : 200)})";
                     break;
                 case DBFieldType.integer:
                     dataType = "int";

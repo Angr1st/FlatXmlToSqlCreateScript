@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Xml;
 using System.Linq;
 using System.IO;
@@ -75,7 +74,7 @@ namespace XMLParser.XML
                     var existingNode = existingNodes.First();
                     var subNodeNameList = existingNode.DBFields;
                     subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name, primaryKeyName));
-                    var distinctWithoutUnkowns = subNodeNameList.Distinct().Where(x => x.DBFieldType != DBFieldType.unkown);
+                    var distinctWithoutUnkowns = subNodeNameList.OrderByDescending(field => field.Length).Distinct().Where(x => x.DBFieldType != DBFieldType.unkown);
                     var allDoubleDifferentTyp = distinctWithoutUnkowns.SelectMany(x => distinctWithoutUnkowns.Where(y => x.Name == y.Name && x.DBFieldType != y.DBFieldType)).Where(x => x.DBFieldType != DBFieldType.@double).Distinct();
                     subNodeNameList = distinctWithoutUnkowns.Except(allDoubleDifferentTyp).ToList();
                     DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
@@ -137,9 +136,9 @@ namespace XMLParser.XML
                     }
                     return resultForeignKey && resultPrimaryKey;
                 }).Aggregate((x, y) => x && y);
-            //var clusteredPrimaryKeys = tables.Select(table => (table.PrimaryKey, table))
-            //    .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.ClusteredPrimaryKey)
-            //    .
+            var clusteredPrimaryKeys = tables.Select(table => (table.PrimaryKey, table))
+                .Where(touple => touple.PrimaryKey.pkType == DBFieldKeyType.ClusteredPrimaryKey)
+                .ToList();
             return primaryKeys;
         }
 
@@ -172,7 +171,7 @@ namespace XMLParser.XML
                 if ( primaryKeyCandidateList.Count() == primaryKeyNameList.Count && primaryKeyNameList.Count != 1)
                 {
                     foreach (var item in primaryKeyCandidateList)
-                    {
+                    {//Check if it is here where GPGPGr is not set properly; If this works look at where the fk is set.
                         item.MakeClusteredPrimaryKey();
                     }
                 }
@@ -200,30 +199,30 @@ namespace XMLParser.XML
             return returnList;
         }
 
-        private DBFieldType AnalyseValue(string value)
+        private (DBFieldType fieldType,int length) AnalyseValue(string value)
         {
             if (value.Length == 0)
             {
-                return DBFieldType.unkown;
+                return (DBFieldType.unkown,0);
+            }
+            else if (value.Length == 25 || value.Length == 29)
+            {
+                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.dateTime);
+                return parseSuccess ? (parsedType,value.Length) : (DBFieldType.varchar,value.Length);
             }
             else if (value.Length < 25 && value.Contains("."))
             {
                 var (parseSuccess, parsedType) = TryParse(value, DBFieldType.@double);
-                return parseSuccess ? parsedType : DBFieldType.varchar;
+                return parseSuccess ? (parsedType,0) : (DBFieldType.varchar, value.Length);
             }
             else if (value.Length < 25)
             {
                 var (parseSuccess, parsedType) = TryParse(value, DBFieldType.integer);
-                return parseSuccess ? parsedType : DBFieldType.varchar;
-            }
-            else if (value.Length == 25)
-            {
-                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.dateTime);
-                return parseSuccess ? parsedType : DBFieldType.varchar;
+                return parseSuccess ? (parsedType, 0) : (DBFieldType.varchar, value.Length);
             }
             else
             {
-                return DBFieldType.varchar;
+                return (DBFieldType.varchar, value.Length);
             }
         }
 
