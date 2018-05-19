@@ -28,6 +28,7 @@ namespace XMLParser.DB
         public string Name { get; }
         public DBFieldType DBFieldType { get; }
         public DBFieldKeyType DBFieldKeyType { get; private set; }
+        public int Length { get; }
         public List<(DBTable Table, DBField Field, DBFieldKeyType ReferenceDirection)> ForeignKeyReferences { get; private set; }
 
         public bool ReferencesPrimaryKey { get { return ReferencedPrimaryKey != default; } }
@@ -41,11 +42,12 @@ namespace XMLParser.DB
             }
         }
 
-        public DBField(string name, DBFieldType dBFieldType, DBFieldKeyType dBFieldKeyType)
+        public DBField(string name, (DBFieldType dBFieldType, int length) fieldType ,DBFieldKeyType dBFieldKeyType)
         {
             Name = name;
             DBFieldKeyType = dBFieldKeyType;
-            DBFieldType = dBFieldType;
+            DBFieldType = fieldType.dBFieldType;
+            Length = fieldType.length;
         }
 
         public void MakePrimaryKey()
@@ -111,7 +113,7 @@ namespace XMLParser.DB
             switch (DBFieldType)
             {
                 case DBFieldType.varchar:
-                    dataType = "varchar(200)";
+                    dataType = $"varchar({(Length<10 ? Length : 200)})";
                     break;
                 case DBFieldType.integer:
                     dataType = "int";
