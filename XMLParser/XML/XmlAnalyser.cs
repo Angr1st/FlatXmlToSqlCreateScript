@@ -206,6 +206,11 @@ namespace XMLParser.XML
             {
                 return DBFieldType.unkown;
             }
+            else if (value.Length == 25 || value.Length == 29)
+            {
+                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.dateTime);
+                return parseSuccess ? parsedType : DBFieldType.varchar;
+            }
             else if (value.Length < 25 && value.Contains("."))
             {
                 var (parseSuccess, parsedType) = TryParse(value, DBFieldType.@double);
@@ -214,11 +219,6 @@ namespace XMLParser.XML
             else if (value.Length < 25)
             {
                 var (parseSuccess, parsedType) = TryParse(value, DBFieldType.integer);
-                return parseSuccess ? parsedType : DBFieldType.varchar;
-            }
-            else if (value.Length == 25)
-            {
-                var (parseSuccess, parsedType) = TryParse(value, DBFieldType.dateTime);
                 return parseSuccess ? parsedType : DBFieldType.varchar;
             }
             else
