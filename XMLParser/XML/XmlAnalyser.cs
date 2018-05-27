@@ -29,6 +29,7 @@ namespace XMLParser.XML
 
             IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument, manualyIdentifiedPrimaryKeys);
             File.WriteAllLines(".\\createTables.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
+            File.WriteAllLines(".\\dbstructure.txt", ConvertToStringArray(distinctNodes, false));
         }
 
         private Dictionary<string,List<string>> LoadPrimaryKeyFile(string fileName)
@@ -156,7 +157,7 @@ namespace XMLParser.XML
             }
         }
 
-        private string[] ConvertToStringArray(IEnumerable<DBTable> ps) => ps.Select(x => x.ToString() + ";").ToArray();
+        private string[] ConvertToStringArray(IEnumerable<DBTable> ps, bool toString = true) =>ps.Select(x =>$"{(toString ? x.ToString(): x.PrintDBStructure())};").ToArray();
 
         private List<DBField> GetNodeNames(XmlNodeList nodeList, string nodeName, List<string> primaryKeyNameList)
         {

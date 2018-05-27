@@ -37,12 +37,12 @@ namespace XMLParser.DB
         {
             get
             {
-                var (Table, Field, ReferenceDirection) = ForeignKeyReferences.Where(entry =>  entry.ReferenceDirection.HasFlag(DBFieldKeyType.PrimaryKey)).FirstOrDefault();
+                var (Table, Field, ReferenceDirection) = ForeignKeyReferences.Where(entry => entry.ReferenceDirection.HasFlag(DBFieldKeyType.PrimaryKey)).FirstOrDefault();
                 return (Table, Field);
             }
         }
 
-        public DBField(string name, (DBFieldType dBFieldType, int length) fieldType ,DBFieldKeyType dBFieldKeyType)
+        public DBField(string name, (DBFieldType dBFieldType, int length) fieldType, DBFieldKeyType dBFieldKeyType)
         {
             Name = name;
             DBFieldKeyType = dBFieldKeyType;
@@ -107,13 +107,41 @@ namespace XMLParser.DB
             }
         }
 
+        public string PrintStructure()
+        {
+            return $"{Name},{(DBFieldKeyType.HasFlag(DBFieldKeyType.PrimaryKey) ? "notnull" : "null")},{PrintDBFieldType()};";
+
+            string PrintDBFieldType()
+            {
+                switch (DBFieldType)
+                {
+                    
+                    case DBFieldType.varchar:
+                        return $"{DBFieldType.ToString()},{Length}";
+
+                    case DBFieldType.integer:
+                        return "int";
+
+                    case DBFieldType.@double:
+                        return DBFieldType.ToString();
+
+                    case DBFieldType.dateTime:
+                        return "DateTime";
+
+                    case DBFieldType.unkown:
+                    default:
+                        throw new Exception($"Unkown DBFieldType in {Name}");
+                }
+            }
+        }
+
         public override string ToString()
         {
             string dataType = string.Empty;
             switch (DBFieldType)
             {
                 case DBFieldType.varchar:
-                    dataType = $"varchar({(Length<10 ? Length : 200)})";
+                    dataType = $"varchar({(Length < 10 ? Length : 200)})";
                     break;
                 case DBFieldType.integer:
                     dataType = "int";

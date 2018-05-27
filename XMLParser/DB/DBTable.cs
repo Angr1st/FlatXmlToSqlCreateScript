@@ -18,6 +18,8 @@ namespace XMLParser.DB
 
         public override string ToString() => $"Create table {Name} ({String.Join(",", DBFields)}{KeyStatements()})";
 
+        public string PrintDBStructure() => $"{Name};{String.Join("", DBFields.Select(field => field.PrintStructure()))}";
+
         private string KeyStatements()
         {
             var primaryKey = PrimaryKeyStatement();
