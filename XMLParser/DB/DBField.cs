@@ -117,7 +117,7 @@ namespace XMLParser.DB
                 {
                     
                     case DBFieldType.varchar:
-                        return $"{DBFieldType.ToString()},{Length}";
+                        return $"{DBFieldType.ToString()},{(Length < 10 ? Length : 200)}";
 
                     case DBFieldType.integer:
                         return "int";
