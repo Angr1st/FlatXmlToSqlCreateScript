@@ -76,7 +76,8 @@ namespace XMLParser.XML
                     var subNodeNameList = existingNode.DBFields;
                     subNodeNameList.AddRange(GetNodeNames(item.ChildNodes, item.Name, primaryKeyName));
                     var distinctWithoutUnkowns = subNodeNameList.OrderByDescending(field => field.Length).Distinct().Where(x => x.DBFieldType != DBFieldType.unkown);
-                    var allDoubleDifferentTyp = distinctWithoutUnkowns.SelectMany(x => distinctWithoutUnkowns.Where(y => x.Name == y.Name && x.DBFieldType != y.DBFieldType)).Where(x => x.DBFieldType != DBFieldType.@double).Distinct();
+                    //Possible Bug when varchar && double DBField!!
+                    var allDoubleDifferentTyp = distinctWithoutUnkowns.SelectMany(x => distinctWithoutUnkowns.Where(y => x.Name == y.Name && x.DBFieldType != y.DBFieldType)).Where(x => x.DBFieldType != DBFieldType.@double && x.DBFieldType != DBFieldType.varchar).Distinct();
                     subNodeNameList = distinctWithoutUnkowns.Except(allDoubleDifferentTyp).ToList();
                     DBTable newEntry = new DBTable(existingNode.Name, subNodeNameList);
                     nodeNames.Remove(existingNode);
