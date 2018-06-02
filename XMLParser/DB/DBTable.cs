@@ -16,15 +16,17 @@ namespace XMLParser.DB
             DBFields = fields;
         }
 
-        public override string ToString() => $"Create table {Name} ({String.Join(",", DBFields)}{KeyStatements()})";
+        public override string ToString() => PrintCreateStatement();
+
+        public string PrintCreateStatement(bool WithForeignKeys = true) => $"Create table {Name} ({String.Join(",", DBFields)}{KeyStatements(WithForeignKeys)})";
 
         public string PrintDBStructure() => $"{Name};{String.Join("", DBFields.Select(field => field.PrintStructure())).TrimEnd(';')}";
 
-        private string KeyStatements()
+        private string KeyStatements(bool WithForeignKeys = true)
         {
             var primaryKey = PrimaryKeyStatement();
             var foreignKey = ForeignKeyStatement();
-            return foreignKey.Length != 0 ? $"{primaryKey} ,{foreignKey}" : primaryKey ;
+            return foreignKey.Length != 0 && WithForeignKeys ? $"{primaryKey} ,{foreignKey}" : primaryKey ;
         }
 
         private string PrimaryKeyStatement()
