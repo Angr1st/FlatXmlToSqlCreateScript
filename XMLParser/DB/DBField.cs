@@ -109,8 +109,24 @@ namespace XMLParser.DB
 
         public string PrintStructure()
         {
-            return $"{Name},{(DBFieldKeyType.HasFlag(DBFieldKeyType.PrimaryKey) ? "notnull" : "null")},{PrintDBFieldType()};";
+            return $"{Name},{PrintDBFieldKeyType()},{(DBFieldKeyType.HasFlag(DBFieldKeyType.PrimaryKey) ? "notnull" : "null")},{PrintDBFieldType()};";
 
+            string PrintDBFieldKeyType()
+            {
+                if (DBFieldKeyType.HasFlag(DBFieldKeyType.PrimaryKey))
+                {
+                    return DBFieldKeyType.PrimaryKey.ToString();
+                }
+                else if (DBFieldKeyType.HasFlag(DBFieldKeyType.ClusteredPrimaryKey))
+                {
+                    return DBFieldKeyType.ClusteredPrimaryKey.ToString();
+                }
+                else
+                {
+                    return DBFieldKeyType.Value.ToString();
+                }
+            }
+            
             string PrintDBFieldType()
             {
                 switch (DBFieldType)
