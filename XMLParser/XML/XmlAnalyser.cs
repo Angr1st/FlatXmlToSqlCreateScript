@@ -28,6 +28,7 @@ namespace XMLParser.XML
             }
 
             IEnumerable<DBTable> distinctNodes = ExtractUniqueNodeNames(xmlDocument, manualyIdentifiedPrimaryKeys);
+            distinctNodes = distinctNodes.Append(new DBTable("pdfimport", new List<DBField>() { new DBField("pdfname", (DBFieldType.varchar, 200), DBFieldKeyType.Value) })).Select(table => table.AddDefaultFieldToTable()).ToList();
             File.WriteAllLines(".\\createTables.txt", ConvertToStringArray(distinctNodes).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
             File.WriteAllLines(".\\createTableswithoutForeignKeys.txt", ConvertToStringArray(distinctNodes,true,false).Append($"Count of Different Nodes: {distinctNodes.Count()}"));
             File.WriteAllLines(".\\dbstructure.txt", ConvertToStringArray(distinctNodes, false));

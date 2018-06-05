@@ -29,12 +29,12 @@ namespace XMLParser.DB
             return foreignKey.Length != 0 && WithForeignKeys ? $"{primaryKey} ,{foreignKey}" : primaryKey ;
         }
 
-        public bool AddDefaultFieldToTable()
+        public DBTable AddDefaultFieldToTable()
         {
             var defaultField = new DBField("pdfimportid", (DBFieldType.integer, 0), DBFieldKeyType.ClusteredPrimaryKey);
             DBFields.Add(defaultField);
             TurnAllPrimaryKeyEntrysToClusteredPrimaryKey();
-            return true;
+            return this;
         }
 
         private void TurnAllPrimaryKeyEntrysToClusteredPrimaryKey()
@@ -42,6 +42,10 @@ namespace XMLParser.DB
             if (PrimaryKey.pkType.HasFlag(DBFieldKeyType.PrimaryKey))
             {
                 PrimaryKey.primaryKeyFields.Select(primaryKeys => { primaryKeys.MakeClusteredPrimaryKey(); return true; }).ToList();
+            }
+            else
+            {
+                DBFields.Find(field => field.Name == "pdfimportid").MakePrimaryKey();
             }
         }
 
